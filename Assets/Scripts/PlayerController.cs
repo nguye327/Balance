@@ -26,6 +26,7 @@ public class PlayerController : MonoBehaviour
     private bool pushing;
     private bool canAttack;
     private bool isAttacking;
+    private bool countering;
     private bool takingDamage;
     private bool usingDark;
     private bool upHeld;
@@ -35,10 +36,14 @@ public class PlayerController : MonoBehaviour
     private float marioTime;
     private float sideJTime;
     private float horzM;
-
+    private float[] damageMult = {1f,1f,1f};//subject to change
+    private float balance;
+    private float darkAff;
+    private float lightAff;
     private Rigidbody2D rb2d;
     private Animator anim;
     private LayerMask groundLayer;
+    private LayerMask enemyLayer;
     private InputAction moveInput;
 
     private int currHP;
@@ -55,24 +60,63 @@ public class PlayerController : MonoBehaviour
     private const float LARGE_ATTACK_RAD = 1f;
     private const float AOE_ATTACK_RAD = 1.5f;
     private const int MAX_HP_BASE = 100;
+    private const float FLINCH_DIST = 5f;
 
     private AttStackScript attStack;
 
+    class Attack
+    {
+        public int hits;
+        public float[] windUp;
+        public float animTime;
+        public Vector2 attackPos;
+        public float rad;
+        public int[] attackType;
+        public float[] damage;
+        public float balChange;
+
+        public Attack(int h, float[] wu, float anim, Vector2 ap, float r, int[] at, float[] d, float bc)
+        {
+            hits = h;
+            windUp = wu;
+            animTime = anim;
+            attackPos = ap;
+            rad = r;
+            attackType = at;
+            damage = d;
+            balChange = bc;
+            
+        }
+        public int GetType(int h, bool ud)
+        {
+            return (attackType[h] == 0) ? 0 : (ud) ? 1 : 2;
+        }
+    }
+    Dictionary<string, Attack> groundAttacks;
+    Dictionary<string, Attack> airAttacks;
+
     void Start(){
         rb2d = GetComponent<Rigidbody2D>();
-
+        anim = GetComponent<Animator>();
         attStack = new AttStackScript();
         startJump = false;
         dashing = false;
         stoppedJump = true;
-        grounded = false;
+        anim.SetBool("grounded", false);
         wallGrab = false;
         groundLayer = LayerMask.GetMask("Ground");
+        enemyLayer = LayerMask.GetMask("Enemy");
         sideJTime = 0f;
-        canAttack = true;
+        anim.SetBool("canAttack", true);
         isAttacking = false;
+        countering = false;
         takingDamage = false;
         usingDark = false;
+        balance = 0f;
+        darkAff = 1f;
+        lightAff = 1f;
+
+        //groundAttacks.Add("combo", new Attack());
 
         currHP = (PlayerPrefs.HasKey("currHP")) ? PlayerPrefs.GetInt("currHP") : MAX_HP_BASE;
     }
@@ -80,15 +124,15 @@ public class PlayerController : MonoBehaviour
     //new input listeners
     void OnHorizontal(InputValue value)
     {
-        if (sideJTime <= 0f)
+        if (sideJTime <= 0f && !isAttacking)
             horzM = value.Get<float>();
 
     }
     void OnJump(InputValue value)
     {
-        if (value.isPressed)
+        if (value.isPressed && !isAttacking)
         {
-            if ((grounded || coyote < COYO_MAX))
+            if ((anim.GetBool("grounded") || coyote < COYO_MAX))
             {
                 coyote = COYO_MAX;
                 startJump = true;
@@ -99,17 +143,18 @@ public class PlayerController : MonoBehaviour
             {
                 rb2d.velocity = new Vector2(-horzM * SPEED * 5, JUMP_SPD * 1.25f);
                 wallGrab = false;
-                sideJTime = 0.2f;
+                sideJTime = 0.5f;
             }
         }
         else if (!stoppedJump)
         {
+            
             stoppedJump = true;
         }
     }
     void OnDash(InputValue value)
     {
-        if (value.isPressed && grounded)
+        if (value.isPressed && anim.GetBool("grounded"))
         {
             dashing = true;
             Debug.Log("dashing");
@@ -148,21 +193,31 @@ public class PlayerController : MonoBehaviour
         else if (downHeld)
             attStack.stored[(int)(AttStackScript.Inputs.Down)] = true;
     }
-    void OnUp(InputValue value)
+    void OnVertical(InputValue value)
     {
         if (value.isPressed)
-            upHeld = true;
+        {
+            if (value.Get<float>() > 0)
+            {
+                upHeld = true;
+                downHeld = false;
+            }
+                
+            else
+            {
+                downHeld = true;
+                upHeld = false;
+            }
+                
+        }
+            
         else
+        {
             upHeld = false;
-
-    }
-    void OnDown(InputValue value)
-    {
-        if (value.isPressed)
-            downHeld = true;
-        else
             downHeld = false;
-        
+        }
+            
+
     }
 
 
@@ -173,83 +228,54 @@ public class PlayerController : MonoBehaviour
             //game over
         }
 
-        string result = attStack.Update(Time.deltaTime);       
-        //check for combat execution
-        if (result != "waiting")
+        //if (true) //check for paused game state{}
+        //else if (true) //check for cinematic game state{}
+        //else
         {
-            attStack.Reset();
-            if (canAttack)
+            string result = attStack.Update(Time.deltaTime);
+            //check for combat execution
+            if (result != "waiting")
             {
-                switch (result)
+                attStack.Reset();
+                if (anim.GetBool("canAttack") && result != "none")
                 {
-                    //counter
-                    case "counter":
-                        Debug.Log(result);
-                        break;
-                    //combo
-                    case "combo":
-                        Debug.Log(result);
-                        break;
-                    //combo forward
-                    case "forward combo":
-                        Debug.Log(result);
-                        break;
-
-                    //physical attack
-                    case "phys":
-                        Debug.Log(result);
-                        break;
-                    //physical forward
-                    case "phys forward":
-                        Debug.Log(result);
-                        break;
-                    //physical down
-                    case "phys down":
-                        Debug.Log(result);
-                        break;
-                    //physical up
-                    case "phys up":
-                        Debug.Log(result);
-                        break;
-
-                    //magic attack
-                    case "mag":
-                        Debug.Log(result);
-                        break;
-                    //magic forward
-                    case "mag forward":
-                        Debug.Log(result);
-                        break;
-                    //magic down
-                    case "mag down":
-                        Debug.Log(result);
-                        break;
-                    //magic up
-                    case "mag up":
-                        Debug.Log(result);
-                        break;
+                    Combat(result);
                 }
-            }
-            
 
+
+            }
+            //if the player is not in an attack or damage animation, can make a new attack
+            if (!isAttacking && !takingDamage)
+            {
+                anim.SetBool("canAttack", true);
+            }
         }
-        //if the player is not in an attack or damage animation, can make a new attack
-        if (!isAttacking && !takingDamage)
-        {
-            canAttack = true;
-        }
+        
     }
     void FixedUpdate()
     {
-        Movement();
-        Combat();
+        //if (true) //check for paused game state{}
+        //else if (true) //check for cinematic game state{}
+        //else
+        if (!takingDamage)
+        {
+            Movement();
+        }
+    }
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //check if colliding with an enemy
+        if (collision.collider.IsTouchingLayers(enemyLayer.value) && !takingDamage)
+        {
+            TakeDamage(10f, 0, collision.gameObject.transform.position);
+        }
     }
 
     private void Movement()
     {
         float d = (dashing) ? DASH : 0f;
         //horizontal
-        if (sideJTime <= 0f)
+        if (sideJTime <= 0f && !isAttacking)
             rb2d.velocity = new Vector2(horzM * (SPEED + d), rb2d.velocity.y);
         else
             sideJTime -= Time.deltaTime;
@@ -274,7 +300,7 @@ public class PlayerController : MonoBehaviour
             wallGrab = true;
             //on hit, if distance is under the const, force the object to a specific spot
             Debug.Log("Hit: " + hitK.distance);
-            if (hitH.distance < HORIZ_COLL_DIST)
+            if (hitK.distance < HORIZ_COLL_DIST)
             {
                 rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitK.distance), rb2d.velocity.y);
             }
@@ -282,13 +308,14 @@ public class PlayerController : MonoBehaviour
         }
         else
             wallGrab = false;
-        
-            
+
+
         //vertical
         //check for floor
-        grounded = Physics2D.OverlapCircle(groundCheck.position, VERT_COLL_DIST, groundLayer);
+        anim.SetBool("grounded", Physics2D.OverlapCircle(groundCheck.position, VERT_COLL_DIST, groundLayer));
+        
         //update coyote timer, can't wallgrab when on the ground
-        if (grounded)
+        if (anim.GetBool("grounded"))
         {
             coyote = 0f;
             wallGrab = false;
@@ -300,16 +327,20 @@ public class PlayerController : MonoBehaviour
             dashing = false;
         }
             
-        //jump/"mario" jump
-        if (startJump || !stoppedJump)
+        if (!isAttacking)
         {
-            startJump = false;
-            rb2d.velocity = new Vector2(rb2d.velocity.x, JUMP_SPD);
-            //update "mario" jump time
-            marioTime += Time.deltaTime;
-            if (marioTime > MARIO_MAX)
-                stoppedJump = true;
-        }
+            //jump/"mario" jump
+            if (startJump || !stoppedJump)
+            {
+                startJump = false;
+                rb2d.velocity = new Vector2(rb2d.velocity.x, JUMP_SPD);
+                //update "mario" jump time
+                marioTime += Time.deltaTime;
+                if (marioTime > MARIO_MAX)
+                    stoppedJump = true;
+            }
+        } 
+        
 
         //facing stuff
         if (rb2d.velocity.x > 0f)
@@ -326,9 +357,75 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void Combat()
+    private void Combat(string result)
     {
+        isAttacking = true;
+        Debug.Log(result);
+        if (anim.GetBool("grounded"))
+        {
+            if (result == "counter")
+            {
+                countering = true;
+            }
+            else
+            {
+                for (int i = 0; i < groundAttacks[result].hits; i++)
+                {
+                    StartCoroutine(AttackDamageTimer(groundAttacks[result].windUp[i],
+                                                groundAttacks[result].attackPos,
+                                                groundAttacks[result].rad,
+                                                groundAttacks[result].GetType(i,usingDark),
+                                                groundAttacks[result].damage[i]));
+                }
+               
+                StartCoroutine(NotAttackingTimer(groundAttacks[result].animTime));
+                float change = (usingDark) ? groundAttacks[result].balChange * darkAff 
+                                           : -groundAttacks[result].balChange * lightAff;
+                balance = Mathf.Clamp(balance + change, -100f, 100f);
+                string animName = (groundAttacks[result].attackType[0] == 0) ? result : 
+                                  (usingDark) ? result+ "Dark" : result+ "Light";
+                anim.SetTrigger(animName);
+            }
+        }
+        else
+        {
+            //not grounded
+            if (result == "counter")
+            {
+
+            }
+            else
+            {
+                for (int i = 0; i < airAttacks[result].hits; i++)
+                {
+                    StartCoroutine(AttackDamageTimer(airAttacks[result].windUp[i],
+                                                 airAttacks[result].attackPos,
+                                                 airAttacks[result].rad,
+                                                 airAttacks[result].GetType(i,usingDark),
+                                                 airAttacks[result].damage[i]));
+                }
+                StartCoroutine(NotAttackingTimer(airAttacks[result].animTime));
+                float change = (usingDark) ? airAttacks[result].balChange * darkAff
+                                           : -airAttacks[result].balChange * lightAff;
+                balance = Mathf.Clamp(balance + change, -100f, 100f);
+                string animName = (airAttacks[result].attackType[0] == 0) ? result+ "Air" :
+                                  (usingDark) ? result + "AirDark" : result + "AirLight";
+                anim.SetTrigger(animName);
+            }
+        }
         
+    }
+    public void TakeDamage(float damage, int type, Vector2 enemyDir)
+    {
+        currHP -= (int)(damage * damageMult[type]);
+        isAttacking = false;
+        takingDamage = true;
+        //play flinch animation
+        Vector2 pushDir = transform.position;
+        pushDir -= enemyDir;
+        rb2d.velocity = pushDir * FLINCH_DIST;
+        StopAllCoroutines();
+        StartCoroutine(Flinching());
     }
 
     private void OnDrawGizmos()
@@ -342,13 +439,28 @@ public class PlayerController : MonoBehaviour
         
     }
 
-    IEnumerator AttackAnimTimer(float waitTime)
+    private IEnumerator AttackDamageTimer(float windUp, Vector2 attackPos, float rad, int attackType, float damage)
     {
-        isAttacking = true;
-        canAttack = false;
-        //yield on a new YieldInstruction that waits for waitTime seconds.
-        yield return new WaitForSeconds(waitTime);
-        //is no longer attacking/in the attack animation
+        //windUp is the amount of time between the start of the animation and when it should deal damage
+        yield return new WaitForSeconds(windUp);
+        //deal damage to all enemies in the radius
+        Vector2 actualPos = transform.position;
+        actualPos += attackPos;
+        Collider2D[] hits = Physics2D.OverlapCircleAll(actualPos, rad, enemyLayer);
+        foreach (Collider2D hit in hits)
+        {
+            Debug.Log("hit enemy!");
+            hit.gameObject.GetComponent<EnemyAI>().TakeDamage(damage, attackType);
+        }
+    }
+    private IEnumerator NotAttackingTimer(float wait)
+    {
+        yield return new WaitForSeconds(wait);
         isAttacking = false;
+    }
+    private IEnumerator Flinching()
+    {
+        yield return new WaitForSeconds(0.5f);
+        takingDamage = false;
     }
 }

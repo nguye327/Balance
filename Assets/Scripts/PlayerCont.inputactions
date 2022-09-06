@@ -15,6 +15,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "Vertical",
+                    "type": "Button",
+                    "id": "dc8f2698-ad1f-4cf2-8eb7-013ec804046b",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Jump",
                     "type": "Button",
                     "id": "bba91f32-904a-4b1b-9cc7-f797c2ed537b",
@@ -63,24 +72,6 @@
                     "name": "Counter",
                     "type": "Button",
                     "id": "8f7b083c-d1e7-4956-a1dd-05a19387cbff",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "Up",
-                    "type": "Button",
-                    "id": "c8f0c5ca-f9e2-4a3e-9dd5-7c5320496887",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "Down",
-                    "type": "Button",
-                    "id": "daa391e8-b78e-483b-9bf1-941cd27ffdbe",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
@@ -188,26 +179,37 @@
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "",
-                    "id": "9815fd13-bc7e-48b9-808a-96249494a005",
-                    "path": "<Keyboard>/w",
-                    "interactions": "Press(behavior=2)",
+                    "name": "YAxis",
+                    "id": "b413305a-0304-4c07-b1be-a3e5a4b02581",
+                    "path": "1DAxis",
+                    "interactions": "",
                     "processors": "",
-                    "groups": "Key and Mouse",
-                    "action": "Up",
-                    "isComposite": false,
+                    "groups": "",
+                    "action": "Vertical",
+                    "isComposite": true,
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "",
-                    "id": "a8aaf919-7825-4351-98d7-035322128ca2",
+                    "name": "negative",
+                    "id": "b2b2f495-72d5-4391-bcf3-6d73bc5d3180",
                     "path": "<Keyboard>/s",
-                    "interactions": "Press(behavior=2)",
+                    "interactions": "",
                     "processors": "",
-                    "groups": "Key and Mouse",
-                    "action": "Down",
+                    "groups": "",
+                    "action": "Vertical",
                     "isComposite": false,
-                    "isPartOfComposite": false
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "positive",
+                    "id": "2fc4c0dc-ab54-444f-90ea-2ce10364c638",
+                    "path": "<Keyboard>/w",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Vertical",
+                    "isComposite": false,
+                    "isPartOfComposite": true
                 }
             ]
         },

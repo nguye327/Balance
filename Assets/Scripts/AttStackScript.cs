@@ -34,7 +34,7 @@ public class AttStackScript
                 return "counter";
             //check for combo attack plus pushing a direction
             else if (stored[(int)Inputs.PAttack] && stored[(int)Inputs.MAttack] && stored[(int)Inputs.Forward])
-                return "forward combo";
+                return "forwardCombo";
             //check for combo attack without direction
             else if (stored[(int)Inputs.PAttack] && stored[(int)Inputs.MAttack])
                 return "combo";
@@ -43,13 +43,13 @@ public class AttStackScript
             {
                 //up
                 if (stored[(int)Inputs.Up])
-                    return "phys up";
+                    return "physUp";
                 //down
                 else if (stored[(int)Inputs.Down])
-                    return "phys down";
+                    return "physDown";
                 //forward
                 else if (stored[(int)Inputs.Forward])
-                    return "phys forward";
+                    return "physForward";
                 //none
                 else
                     return "phys";
@@ -59,13 +59,13 @@ public class AttStackScript
             {
                 //up
                 if (stored[(int)Inputs.Up])
-                    return "mag up";
+                    return "magUp";
                 //down
                 else if (stored[(int)Inputs.Down])
-                    return "mag down";
+                    return "magDown";
                 //forward
                 else if (stored[(int)Inputs.Forward])
-                    return "mag forward";
+                    return "magForward";
                 //none
                 else
                     return "mag";
