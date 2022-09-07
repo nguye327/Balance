@@ -25,6 +25,7 @@ public class Door : Interactable
         {
             closed = false;
             obstacle.SetActive(false);
+            Debug.Log("Opened");
             //play open animation
         }
         else 
@@ -37,6 +38,7 @@ public class Door : Interactable
     {
         closed = true;
         obstacle.SetActive(true);
+        Debug.Log("Closed");
         //play closed animation
     }
 
