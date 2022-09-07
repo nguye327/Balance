@@ -11,7 +11,7 @@ public class EnemyAI : MonoBehaviour
     public float jump = 0.3f;
     public float jumpOffset = 0.1f;
     public float jumpNodeReq = 0.8f;
-    public float nextWaypointCheck = 2f;
+    public float nextWaypointCheck = 1f;
 
     private float[] damageMult = new float[3];
     [Header("Combat")]
@@ -77,27 +77,33 @@ public class EnemyAI : MonoBehaviour
         playerLayer = LayerMask.GetMask("Player");
         seeker = GetComponent<Seeker>();
         rb2d = GetComponent<Rigidbody2D>();
-        pathRefreshTime = 0.5f;
+        pathRefreshTime = 0.25f;
 
-        flying = false;
-        grounded = false;
-        chaser = true;
-        hasFacing = true;
         currentWaypoint = 0;
 
         startPos = transform;
 
-        hp = 100f;
         flinchCheck = 0f;
-        flinchThreshold = hp / 2;
         flinchTime = 0f;
 
         InvokeRepeating("UpdatePath", 0f, pathRefreshTime);
         InvokeRepeating("UpdateIdlePos", 0f, 3f);
 
-        attacks = new Attack[] {new Attack(1f, transform, 2f, 0, 5f, true),
-                                new Attack(2f, transform, 2f, 0, 20f, false)};
-        damageMult = new float[] {1f,1f,1f};
+        EnemySpecificStart();
+    }
+    private void EnemySpecificStart()
+    {
+        flying = false;
+        grounded = false;
+        chaser = true;
+        hasFacing = true;
+
+        hp = 100f;
+        flinchThreshold = hp / 2;
+
+        attacks = new Attack[] {new Attack(1f, transform, 1.5f, 0, 5f, true),
+                                new Attack(2f, transform, 1.5f, 0, 20f, false)};
+        damageMult = new float[] { 1f, 1f, 1f };
     }
 
     // Update is called once per frame
@@ -142,13 +148,18 @@ public class EnemyAI : MonoBehaviour
     private void Combat()
     {
         //if close enough to the player, attack
-        attacking = true;
-        //pick a random attack
-        System.Random random = new System.Random();
-        int num = random.Next(0, attacks.Length);
-        //start timer to make the attack
-        StartCoroutine (AttackDamageTimer(attacks[num]));
-        //play the animation
+        float dist = Vector2.Distance(rb2d.position, target.position);
+        if (dist < 1.5f)
+        {
+            attacking = true;
+            //pick a random attack
+            System.Random random = new System.Random();
+            int num = random.Next(0, attacks.Length);
+            //start timer to make the attack
+            StartCoroutine(AttackDamageTimer(attacks[num]));
+            //play the animation
+        }
+
 
     }
     private void UpdatePath()
@@ -251,6 +262,8 @@ public class EnemyAI : MonoBehaviour
         yield return new WaitForSeconds(attack.windUp);
         attacking = false;
         //deal damage to player in the radius
+        Vector2 actualPos = transform.position;
+
         Collider2D[] hits = Physics2D.OverlapCircleAll(attack.attackPos.position, attack.rad, playerLayer);
         foreach (Collider2D hit in hits)
         {

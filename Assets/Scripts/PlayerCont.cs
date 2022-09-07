@@ -98,6 +98,15 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Interact"",
+                    ""type"": ""Button"",
+                    ""id"": ""ef8c8376-59b6-4135-bc24-771ca5426d20"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -232,6 +241,17 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
                     ""action"": ""Vertical"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""5eeb7bd9-71d5-4731-9d6d-1916afbd8c6c"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Key and Mouse"",
+                    ""action"": ""Interact"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -293,6 +313,7 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
         m_Gameplay_Magical = m_Gameplay.FindAction("Magical", throwIfNotFound: true);
         m_Gameplay_Swap = m_Gameplay.FindAction("Swap", throwIfNotFound: true);
         m_Gameplay_Counter = m_Gameplay.FindAction("Counter", throwIfNotFound: true);
+        m_Gameplay_Interact = m_Gameplay.FindAction("Interact", throwIfNotFound: true);
         // New action map
         m_Newactionmap = asset.FindActionMap("New action map", throwIfNotFound: true);
         m_Newactionmap_Newaction = m_Newactionmap.FindAction("New action", throwIfNotFound: true);
@@ -363,6 +384,7 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Magical;
     private readonly InputAction m_Gameplay_Swap;
     private readonly InputAction m_Gameplay_Counter;
+    private readonly InputAction m_Gameplay_Interact;
     public struct GameplayActions
     {
         private @PlayerCont m_Wrapper;
@@ -375,6 +397,7 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
         public InputAction @Magical => m_Wrapper.m_Gameplay_Magical;
         public InputAction @Swap => m_Wrapper.m_Gameplay_Swap;
         public InputAction @Counter => m_Wrapper.m_Gameplay_Counter;
+        public InputAction @Interact => m_Wrapper.m_Gameplay_Interact;
         public InputActionMap Get() { return m_Wrapper.m_Gameplay; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -408,6 +431,9 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
                 @Counter.started -= m_Wrapper.m_GameplayActionsCallbackInterface.OnCounter;
                 @Counter.performed -= m_Wrapper.m_GameplayActionsCallbackInterface.OnCounter;
                 @Counter.canceled -= m_Wrapper.m_GameplayActionsCallbackInterface.OnCounter;
+                @Interact.started -= m_Wrapper.m_GameplayActionsCallbackInterface.OnInteract;
+                @Interact.performed -= m_Wrapper.m_GameplayActionsCallbackInterface.OnInteract;
+                @Interact.canceled -= m_Wrapper.m_GameplayActionsCallbackInterface.OnInteract;
             }
             m_Wrapper.m_GameplayActionsCallbackInterface = instance;
             if (instance != null)
@@ -436,6 +462,9 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
                 @Counter.started += instance.OnCounter;
                 @Counter.performed += instance.OnCounter;
                 @Counter.canceled += instance.OnCounter;
+                @Interact.started += instance.OnInteract;
+                @Interact.performed += instance.OnInteract;
+                @Interact.canceled += instance.OnInteract;
             }
         }
     }
@@ -492,6 +521,7 @@ public partial class @PlayerCont : IInputActionCollection2, IDisposable
         void OnMagical(InputAction.CallbackContext context);
         void OnSwap(InputAction.CallbackContext context);
         void OnCounter(InputAction.CallbackContext context);
+        void OnInteract(InputAction.CallbackContext context);
     }
     public interface INewactionmapActions
     {

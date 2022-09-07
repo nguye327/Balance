@@ -44,6 +44,7 @@ public class PlayerController : MonoBehaviour
     private Animator anim;
     private LayerMask groundLayer;
     private LayerMask enemyLayer;
+    private LayerMask interactLayer;
     private InputAction moveInput;
 
     private int currHP;
@@ -54,13 +55,14 @@ public class PlayerController : MonoBehaviour
     private const float SPEED = 5f;
     private const float DASH = 2.5f;
     private const float COYO_MAX = 0.35f;
-    private const float VERT_COLL_DIST = 0.24f;
+    private const float VERT_COLL_DIST = 0.15f;
     private const float HORIZ_COLL_DIST = 0.27f;
     private const float SMALL_ATTACK_RAD = 0.5f;
     private const float LARGE_ATTACK_RAD = 1f;
     private const float AOE_ATTACK_RAD = 1.5f;
+    private const float INTERACT_RAD = 1f;
     private const int MAX_HP_BASE = 100;
-    private const float FLINCH_DIST = 5f;
+    private const float FLINCH_DIST = 4f;
 
     private AttStackScript attStack;
 
@@ -106,6 +108,7 @@ public class PlayerController : MonoBehaviour
         wallGrab = false;
         groundLayer = LayerMask.GetMask("Ground");
         enemyLayer = LayerMask.GetMask("Enemy");
+        interactLayer = LayerMask.GetMask("Interact");
         sideJTime = 0f;
         anim.SetBool("canAttack", true);
         isAttacking = false;
@@ -141,9 +144,9 @@ public class PlayerController : MonoBehaviour
             }
             else if (wallGrab)
             {
-                rb2d.velocity = new Vector2(-horzM * SPEED * 5, JUMP_SPD * 1.25f);
+                rb2d.velocity = new Vector2(-horzM * SPEED, JUMP_SPD * 1.25f);
                 wallGrab = false;
-                sideJTime = 0.5f;
+                sideJTime = 0.1f;
             }
         }
         else if (!stoppedJump)
@@ -220,6 +223,15 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    void OnInteract(InputValue val)
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, INTERACT_RAD, interactLayer);
+        foreach (Collider2D hit in hits)
+        {
+            Debug.Log("interact with "+hit.gameObject.name);
+            hit.GetComponent<Interactable>().Interact();
+        }
+    }
 
     private void Update()
     {
@@ -289,10 +301,10 @@ public class PlayerController : MonoBehaviour
             wallGrab = true;
             //on hit, if distance is under the const, force the object to a specific spot
             Debug.Log("Hit: " + hitH.distance);
-            if (hitH.distance < HORIZ_COLL_DIST)
-            {
-                rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitH.distance), rb2d.velocity.y);
-            }
+            //if (hitH.distance < HORIZ_COLL_DIST)
+            //{
+            //    rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitH.distance), rb2d.velocity.y);
+            //}
 
         }
         else if (hitK)
@@ -300,10 +312,10 @@ public class PlayerController : MonoBehaviour
             wallGrab = true;
             //on hit, if distance is under the const, force the object to a specific spot
             Debug.Log("Hit: " + hitK.distance);
-            if (hitK.distance < HORIZ_COLL_DIST)
-            {
-                rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitK.distance), rb2d.velocity.y);
-            }
+            //if (hitK.distance < HORIZ_COLL_DIST)
+            //{
+            //    rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitK.distance), rb2d.velocity.y);
+            //}
 
         }
         else
@@ -417,15 +429,18 @@ public class PlayerController : MonoBehaviour
     }
     public void TakeDamage(float damage, int type, Vector2 enemyDir)
     {
-        currHP -= (int)(damage * damageMult[type]);
-        isAttacking = false;
-        takingDamage = true;
-        //play flinch animation
-        Vector2 pushDir = transform.position;
-        pushDir -= enemyDir;
-        rb2d.velocity = pushDir * FLINCH_DIST;
-        StopAllCoroutines();
-        StartCoroutine(Flinching());
+        if (!takingDamage)
+        {
+            currHP -= (int)(damage * damageMult[type]);
+            isAttacking = false;
+            takingDamage = true;
+            //play flinch animation
+            Vector2 pushDir = transform.position;
+            pushDir -= enemyDir;
+            rb2d.velocity = pushDir * FLINCH_DIST;
+            StopAllCoroutines();
+            StartCoroutine(Flinching());
+        }
     }
 
     private void OnDrawGizmos()
@@ -460,7 +475,7 @@ public class PlayerController : MonoBehaviour
     }
     private IEnumerator Flinching()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.25f);
         takingDamage = false;
     }
 }
