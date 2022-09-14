@@ -5,6 +5,12 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    /*prolly best to seperate stuff (attacking, stats, movement) into separate scripts later on*/
+
+    //events
+    public event System.Action onHPChanged;
+    public event System.Action onDeath;
+
     //public variables
     //movement
     public Transform groundCheck;
@@ -121,7 +127,10 @@ public class PlayerController : MonoBehaviour
 
         //groundAttacks.Add("combo", new Attack());
 
-        currHP = (PlayerPrefs.HasKey("currHP")) ? PlayerPrefs.GetInt("currHP") : MAX_HP_BASE;
+        setCurrHP((PlayerPrefs.HasKey("currHP")) ? PlayerPrefs.GetInt("currHP") : MAX_HP_BASE);
+
+        //Event handling
+        onHPChanged += CheckHP;
     }
 
     //new input listeners
@@ -235,7 +244,10 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (currHP <= 0)
+        /* austin: In general, this is an easy but unoptimized way of checking for player character death. We should make checks every time the player takes damage or changes HP via events
+         * because constantly polling for things like this every frame has the potential to fuck framerates on lower spec devices. 
+         */
+        if (currHP <= 0) 
         {
             //game over
         }
@@ -431,7 +443,7 @@ public class PlayerController : MonoBehaviour
     {
         if (!takingDamage)
         {
-            currHP -= (int)(damage * damageMult[type]);
+            ChangeHP((-damage * damageMult[type]));
             isAttacking = false;
             takingDamage = true;
             //play flinch animation
@@ -440,6 +452,52 @@ public class PlayerController : MonoBehaviour
             rb2d.velocity = pushDir * FLINCH_DIST;
             StopAllCoroutines();
             StartCoroutine(Flinching());
+        }
+    }
+
+    /*
+     * returns currHP  current hitpoints (currHP) as int
+     */
+    public int getCurrHP()
+    {
+        return currHP;
+    }
+
+    /* 
+     * returns max hp as int
+     */
+    public int getMaxHp()
+    {
+        return MAX_HP_BASE;
+    }
+
+    /* sets currHp to a new value
+     * @param hp new value HP will be set to
+     */
+    public void setCurrHP(int hp)
+    {
+        currHP = Mathf.Clamp(hp, 0, MAX_HP_BASE); // Austin: might not be the cleanest way to do it if we want shit like temporary hit points in the form of buffs or consumables or whatever. If so, suggest we use a new variable that isn't constant in that case.
+        onHPChanged?.Invoke();
+    }
+
+    /*
+     * Changes health. 
+     * @param hpToChange: Health that will be added.
+     */
+    public void ChangeHP(float hpToChange)
+    {
+        setCurrHP(currHP + (int)hpToChange);
+    }
+
+    /* 
+     * Checks HP. good for seeing if player is at full health, half, or dead, etc.
+     */
+    void CheckHP()
+    {
+        //dead
+        if (currHP <=0)
+        {
+            onDeath?.Invoke();
         }
     }
 
@@ -477,5 +535,12 @@ public class PlayerController : MonoBehaviour
     {
         yield return new WaitForSeconds(0.25f);
         takingDamage = false;
+    }
+
+
+    [ContextMenu("deal 5 damage")]
+    protected void damageTest()
+    {
+        ChangeHP(-5);
     }
 }
