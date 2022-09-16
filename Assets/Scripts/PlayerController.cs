@@ -53,7 +53,18 @@ public class PlayerController : MonoBehaviour
     private LayerMask interactLayer;
     private InputAction moveInput;
 
+    [SerializeField]
     private int currHP;
+    public int currHp
+    {
+        get { return currHp; }
+        set
+        {
+            if (currHp == value) return;
+            currHp = value;
+            onHPChanged?.Invoke();
+        }
+    }
 
     //constants
     private const float JUMP_SPD = 6.4f;
