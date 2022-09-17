@@ -6,6 +6,7 @@ using UnityEngine;
 public class HudController : MonoBehaviour
 {
     [SerializeField] private int hpWidthMax;
+    [SerializeField] private int hpHeightMax;
     private float maxHpBase;
     public GameObject canvas;
 
@@ -17,7 +18,7 @@ public class HudController : MonoBehaviour
         player = FindObjectOfType<PlayerController>();
         maxHpBase = (float)player.getMaxHp();
         player.onHPChanged += setCurrHPBar;
-        canvas.transform.Find("Health").GetComponent<RectTransform>().sizeDelta = new Vector2(hpWidthMax, 50);
+        canvas.transform.Find("Health").GetComponent<RectTransform>().sizeDelta = new Vector2(hpWidthMax, hpHeightMax);
     }
 
     void setCurrHPBar()
