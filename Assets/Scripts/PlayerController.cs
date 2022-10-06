@@ -71,7 +71,7 @@ public class PlayerController : MonoBehaviour
     private const float MARIO_MAX = 0.18f;
     private const float SPEED = 5f;
     private const float DASH = 2.5f;
-    private const float COYO_MAX = 0.35f;
+    private const float COYO_MAX = 0.15f;
     private const float VERT_COLL_DIST = 0.15f;
     private const float HORIZ_COLL_DIST = 0.27f;
     private const float SMALL_ATTACK_RAD = 0.5f;
@@ -79,40 +79,13 @@ public class PlayerController : MonoBehaviour
     private const float AOE_ATTACK_RAD = 1.5f;
     private const float INTERACT_RAD = 1f;
     private const int MAX_HP_BASE = 100;
-    private const float FLINCH_DIST = 4f;
+    private const float FLINCH_DIST = 15f;
 
     private AttStackScript attStack;
 
-    class Attack
-    {
-        public int hits;
-        public float[] windUp;
-        public float animTime;
-        public Vector2 attackPos;
-        public float rad;
-        public int[] attackType;
-        public float[] damage;
-        public float balChange;
-
-        public Attack(int h, float[] wu, float anim, Vector2 ap, float r, int[] at, float[] d, float bc)
-        {
-            hits = h;
-            windUp = wu;
-            animTime = anim;
-            attackPos = ap;
-            rad = r;
-            attackType = at;
-            damage = d;
-            balChange = bc;
-            
-        }
-        public int GetType(int h, bool ud)
-        {
-            return (attackType[h] == 0) ? 0 : (ud) ? 1 : 2;
-        }
-    }
-    Dictionary<string, Attack> groundAttacks;
-    Dictionary<string, Attack> airAttacks;
+    
+    Dictionary<string, PlayerAttacks.Attack> groundAttacks;
+    Dictionary<string, PlayerAttacks.Attack> airAttacks;
 
     void Start(){
         rb2d = GetComponent<Rigidbody2D>();
@@ -136,8 +109,8 @@ public class PlayerController : MonoBehaviour
         darkAff = 1f;
         lightAff = 1f;
 
-        //groundAttacks.Add("combo", new Attack());
-
+        groundAttacks = PlayerAttacks.SetGroundAttacks();
+        airAttacks = PlayerAttacks.SetAirAttacks();
         setCurrHP((PlayerPrefs.HasKey("currHP")) ? PlayerPrefs.GetInt("currHP") : MAX_HP_BASE);
 
         //Event handling
@@ -450,6 +423,11 @@ public class PlayerController : MonoBehaviour
         }
         
     }
+    
+    public bool IsCountering()
+    {
+        return countering;
+    }
     public void TakeDamage(float damage, int type, Vector2 enemyDir)
     {
         if (!takingDamage)
@@ -458,9 +436,8 @@ public class PlayerController : MonoBehaviour
             isAttacking = false;
             takingDamage = true;
             //play flinch animation
-            Vector2 pushDir = transform.position;
-            pushDir -= enemyDir;
-            rb2d.velocity = pushDir * FLINCH_DIST;
+            Vector2 pushDir = ((Vector2)transform.position - enemyDir);
+            rb2d.velocity = pushDir.normalized * FLINCH_DIST;
             StopAllCoroutines();
             StartCoroutine(Flinching());
         }
