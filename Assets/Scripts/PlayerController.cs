@@ -39,11 +39,11 @@ public class PlayerController : MonoBehaviour
     private bool downHeld;
 
     private float coyote;
+    private float wallCoyote;
+    private float wallDir;
     private float marioTime;
     private float sideJTime;
     private float horzM;
-    private float[] damageMult = {1f,1f,1f};//subject to change
-    private float balance;
     private float darkAff;
     private float lightAff;
     private Rigidbody2D rb2d;
@@ -52,6 +52,8 @@ public class PlayerController : MonoBehaviour
     private LayerMask enemyLayer;
     private LayerMask interactLayer;
     private InputAction moveInput;
+
+    
 
     [SerializeField]
     private int currHP;
@@ -82,7 +84,7 @@ public class PlayerController : MonoBehaviour
     private const float FLINCH_DIST = 15f;
 
     private AttStackScript attStack;
-
+    public EnemyPuppeteer puppeteer;
     
     Dictionary<string, PlayerAttacks.Attack> groundAttacks;
     Dictionary<string, PlayerAttacks.Attack> airAttacks;
@@ -105,9 +107,15 @@ public class PlayerController : MonoBehaviour
         countering = false;
         takingDamage = false;
         usingDark = false;
-        balance = 0f;
+        if (PlayerPrefs.HasKey("worldBalance"))
+            puppeteer.worldBalance = PlayerPrefs.GetFloat("worldBalance");
+        else
+            puppeteer.worldBalance = 0f;
+
         darkAff = 1f;
         lightAff = 1f;
+
+        wallCoyote = 0f;
 
         groundAttacks = PlayerAttacks.SetGroundAttacks();
         airAttacks = PlayerAttacks.SetAirAttacks();
@@ -135,9 +143,9 @@ public class PlayerController : MonoBehaviour
                 stoppedJump = false;
                 marioTime = 0f;
             }
-            else if (wallGrab)
+            else if (wallGrab || wallCoyote < COYO_MAX)
             {
-                rb2d.velocity = new Vector2(-horzM * SPEED, JUMP_SPD * 1.25f);
+                rb2d.velocity = new Vector2(Mathf.Abs(horzM) * wallDir * SPEED, JUMP_SPD * 1.4f);
                 wallGrab = false;
                 sideJTime = 0.1f;
             }
@@ -181,13 +189,16 @@ public class PlayerController : MonoBehaviour
     }
     void OnMagical(InputValue value)
     {
-        attStack.stored[(int)(AttStackScript.Inputs.MAttack)] = true;
-        if (rb2d.velocity.magnitude > 0f)
-            attStack.stored[(int)(AttStackScript.Inputs.Forward)] = true;
-        if (upHeld)
-            attStack.stored[(int)(AttStackScript.Inputs.Up)] = true;
-        else if (downHeld)
-            attStack.stored[(int)(AttStackScript.Inputs.Down)] = true;
+        if (PlayerStats.hasLantern)
+        {
+            attStack.stored[(int)(AttStackScript.Inputs.MAttack)] = true;
+            if (rb2d.velocity.magnitude > 0f)
+                attStack.stored[(int)(AttStackScript.Inputs.Forward)] = true;
+            if (upHeld)
+                attStack.stored[(int)(AttStackScript.Inputs.Up)] = true;
+            else if (downHeld)
+                attStack.stored[(int)(AttStackScript.Inputs.Down)] = true;
+        }
     }
     void OnVertical(InputValue value)
     {
@@ -228,14 +239,6 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        /* austin: In general, this is an easy but unoptimized way of checking for player character death. We should make checks every time the player takes damage or changes HP via events
-         * because constantly polling for things like this every frame has the potential to fuck framerates on lower spec devices. 
-         */
-        if (currHP <= 0) 
-        {
-            //game over
-        }
-
         //if (true) //check for paused game state{}
         //else if (true) //check for cinematic game state{}
         //else
@@ -273,9 +276,9 @@ public class PlayerController : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision)
     {
         //check if colliding with an enemy
-        if (collision.collider.IsTouchingLayers(enemyLayer.value) && !takingDamage)
+        if (collision.collider.gameObject.layer == (enemyLayer.value) && !takingDamage)
         {
-            TakeDamage(10f, 0, collision.gameObject.transform.position);
+            TakeDamage(10f, 0, collision.gameObject.transform.position, collision.gameObject.name);
         }
     }
 
@@ -292,27 +295,11 @@ public class PlayerController : MonoBehaviour
         Debug.DrawRay(head.position, transform.right * horzM, Color.red);
         RaycastHit2D hitH = Physics2D.Raycast(head.position, transform.right * horzM, HORIZ_COLL_DIST,groundLayer.value);
         RaycastHit2D hitK = Physics2D.Raycast(knees.position, transform.right * horzM, HORIZ_COLL_DIST, groundLayer.value);
-        if (hitH)
-        {
+        if (hitH || hitK)
+        {       
+            wallDir = (horzM > 0) ? -1f : 1f;
             wallGrab = true;
-            //on hit, if distance is under the const, force the object to a specific spot
-            Debug.Log("Hit: " + hitH.distance);
-            //if (hitH.distance < HORIZ_COLL_DIST)
-            //{
-            //    rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitH.distance), rb2d.velocity.y);
-            //}
-
-        }
-        else if (hitK)
-        {
-            wallGrab = true;
-            //on hit, if distance is under the const, force the object to a specific spot
-            Debug.Log("Hit: " + hitK.distance);
-            //if (hitK.distance < HORIZ_COLL_DIST)
-            //{
-            //    rb2d.velocity = new Vector2(-horzM * (HORIZ_COLL_DIST - hitK.distance), rb2d.velocity.y);
-            //}
-
+            wallCoyote = 0f;
         }
         else
             wallGrab = false;
@@ -331,7 +318,8 @@ public class PlayerController : MonoBehaviour
             
         else
         {
-            coyote += Time.deltaTime;
+            coyote = Mathf.Clamp(coyote + Time.deltaTime, 0f, COYO_MAX);
+            wallCoyote = Mathf.Clamp(wallCoyote + Time.deltaTime, 0f, COYO_MAX);
             dashing = false;
         }
             
@@ -387,9 +375,9 @@ public class PlayerController : MonoBehaviour
                 }
                
                 StartCoroutine(NotAttackingTimer(groundAttacks[result].animTime));
-                float change = (usingDark) ? groundAttacks[result].balChange * darkAff 
-                                           : -groundAttacks[result].balChange * lightAff;
-                balance = Mathf.Clamp(balance + change, -100f, 100f);
+                float change = (usingDark) ? groundAttacks[result].balChange * (darkAff + PlayerStats.damageDoneMod[1]) 
+                                           : -groundAttacks[result].balChange * (lightAff + PlayerStats.damageDoneMod[2]);
+                puppeteer.worldBalance = Mathf.Clamp(puppeteer.worldBalance + change, -100f, 100f);
                 string animName = (groundAttacks[result].attackType[0] == 0) ? result : 
                                   (usingDark) ? result+ "Dark" : result+ "Light";
                 anim.SetTrigger(animName);
@@ -413,9 +401,9 @@ public class PlayerController : MonoBehaviour
                                                  airAttacks[result].damage[i]));
                 }
                 StartCoroutine(NotAttackingTimer(airAttacks[result].animTime));
-                float change = (usingDark) ? airAttacks[result].balChange * darkAff
-                                           : -airAttacks[result].balChange * lightAff;
-                balance = Mathf.Clamp(balance + change, -100f, 100f);
+                float change = (usingDark) ? airAttacks[result].balChange * (darkAff + PlayerStats.damageDoneMod[1])
+                                           : -airAttacks[result].balChange * (lightAff + PlayerStats.damageDoneMod[2]);
+                puppeteer.worldBalance = Mathf.Clamp(puppeteer.worldBalance + change, -100f, 100f);
                 string animName = (airAttacks[result].attackType[0] == 0) ? result+ "Air" :
                                   (usingDark) ? result + "AirDark" : result + "AirLight";
                 anim.SetTrigger(animName);
@@ -428,11 +416,12 @@ public class PlayerController : MonoBehaviour
     {
         return countering;
     }
-    public void TakeDamage(float damage, int type, Vector2 enemyDir)
+    public void TakeDamage(float damage, int type, Vector2 enemyDir, string attacker)
     {
         if (!takingDamage)
         {
-            ChangeHP((-damage * damageMult[type]));
+            Debug.Log($"Hit by {attacker} for {damage}");
+            ChangeHP((-damage * (1f * PlayerStats.damageTakenMod[type])));
             isAttacking = false;
             takingDamage = true;
             //play flinch animation
@@ -521,7 +510,7 @@ public class PlayerController : MonoBehaviour
     }
     private IEnumerator Flinching()
     {
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.25f * (1f - PlayerStats.flinchMod));
         takingDamage = false;
     }
 
