@@ -145,6 +145,8 @@ public class PlayerController : MonoBehaviour
         {
             if ((anim.GetBool("grounded") || coyote < COYO_MAX))
             {
+                //Calls jump audio
+                FindObjectOfType<AudioManager>().Play("Jump");
                 coyote = COYO_MAX;
                 startJump = true;
                 stoppedJump = false;
