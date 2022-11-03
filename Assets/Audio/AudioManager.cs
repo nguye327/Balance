@@ -29,7 +29,7 @@ public class AudioManager : MonoBehaviour
 
     void Start () 
     {
-        Play("Wind");
+        Play("Start");
     }
 
     public void Play(string name)
