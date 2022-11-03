@@ -87,7 +87,7 @@ public class PlayerController : MonoBehaviour
     private const float HOOK_DIST = 1f;
 
     private AttStackScript attStack;
-    public EnemyPuppeteer puppeteer;
+    private EnemyPuppeteer puppeteer;
     private Transform nearestHook;
     private Transform hookPoint;
     
@@ -95,6 +95,7 @@ public class PlayerController : MonoBehaviour
     Dictionary<string, PlayerAttacks.Attack> airAttacks;
 
     void Start(){
+        puppeteer = GameObject.FindObjectOfType<EnemyPuppeteer>();
         rb2d = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         attStack = new AttStackScript();
