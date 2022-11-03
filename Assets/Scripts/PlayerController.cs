@@ -37,6 +37,7 @@ public class PlayerController : MonoBehaviour
     private bool usingDark;
     private bool upHeld;
     private bool downHeld;
+    private bool hooked;
 
     private float coyote;
     private float wallCoyote;
@@ -51,6 +52,7 @@ public class PlayerController : MonoBehaviour
     private LayerMask groundLayer;
     private LayerMask enemyLayer;
     private LayerMask interactLayer;
+    private LayerMask hookLayer;
     private InputAction moveInput;
 
     
@@ -82,9 +84,12 @@ public class PlayerController : MonoBehaviour
     private const float INTERACT_RAD = 1f;
     private const int MAX_HP_BASE = 100;
     private const float FLINCH_DIST = 15f;
+    private const float HOOK_DIST = 1f;
 
     private AttStackScript attStack;
     public EnemyPuppeteer puppeteer;
+    private Transform nearestHook;
+    private Transform hookPoint;
     
     Dictionary<string, PlayerAttacks.Attack> groundAttacks;
     Dictionary<string, PlayerAttacks.Attack> airAttacks;
@@ -96,11 +101,13 @@ public class PlayerController : MonoBehaviour
         startJump = false;
         dashing = false;
         stoppedJump = true;
+        hooked = false;
         anim.SetBool("grounded", false);
         wallGrab = false;
         groundLayer = LayerMask.GetMask("Ground");
         enemyLayer = LayerMask.GetMask("Enemy");
         interactLayer = LayerMask.GetMask("Interact");
+        hookLayer = LayerMask.GetMask("Hook");
         sideJTime = 0f;
         anim.SetBool("canAttack", true);
         isAttacking = false;
@@ -149,12 +156,28 @@ public class PlayerController : MonoBehaviour
                 wallGrab = false;
                 sideJTime = 0.1f;
             }
+            else if (PlayerStats.hasChain && (nearestHook = GetClosestHook())!= null)
+            {
+                hookPoint = nearestHook;
+                hooked = true;
+            }
         }
-        else if (!stoppedJump)
+        else 
         {
-            
-            stoppedJump = true;
+            if (!stoppedJump)
+                stoppedJump = true;
+            if (hooked)
+            {
+                hooked = false;
+                hookPoint = null;
+            }
+                
         }
+    }
+    private Transform GetClosestHook()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, HOOK_DIST, hookLayer);
+        return null;
     }
     void OnDash(InputValue value)
     {
